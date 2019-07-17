@@ -14,6 +14,7 @@ build:qpkg:
     DATA_DIR: $CI_PROJECT_DIR
     QNAP_CODESIGNING_TOKEN: bbc3888404954c228122cf4f580ba53b
   script:
+    - rsync -a --exclude='data' --exclude='.cache' ./ /build
     - make -C /build 2>&1 | ts
   artifacts:
     name: "pgsql-$CI_COMMIT_REF_NAME-$CI_PIPELINE_IID"
