@@ -1,0 +1,22 @@
+stages:
+  - build
+
+build:qpkg:
+  stage: build
+  image:
+    name: registry.qnap.me/qnap/qpkg-builder:latest
+    entrypoint: [""]
+  tags:
+    - qpkg-runner
+  variables:
+    TZ: Asia/Taipei
+    BUILD_NUMBER: $CI_PIPELINE_IID
+    DATA_DIR: $CI_PROJECT_DIR
+    QNAP_CODESIGNING_TOKEN: bbc3888404954c228122cf4f580ba53b
+  script:
+    - make -C /build 2>&1 | ts
+  artifacts:
+    name: "pgsql-$CI_COMMIT_REF_NAME-$CI_PIPELINE_IID"
+    paths:
+      - "*.qpkg"
+    expire_in: '1 week'
