@@ -1,8 +1,9 @@
-version: '2'
+version: '3'
 
 services:
   db:
     image: postgres:11.4
+    restart: on-failure
     ports:
       - 5432:5432
     volumes:
@@ -11,11 +12,11 @@ services:
       - POSTGRES_PASSWORD=postgres
 
   web:
-    restart: always
     image: dockage/phppgadmin:latest
+    restart: on-failure
     ports:
-      - "7070:80"
-      - "7443:443"
+      - 7070:80
+      - 7443:443
     depends_on:
       - db
     environment:

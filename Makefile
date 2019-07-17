@@ -7,7 +7,7 @@ build:
 	@if [ ! -f /.dockerenv ]; then \
 		set -x; \
 		docker pull $(BUILDER_IMAGE_NAME); \
-		docker run -it --rm --net=host --name=build-pgsql \
+		docker run -it --rm --name=build-pgsql \
 			-e QNAP_CODESIGNING_TOKEN=bbc3888404954c228122cf4f580ba53b \
 			-v /var/run/docker.sock:/var/run/docker.sock \
 			-v $${PWD}:/src:ro \
