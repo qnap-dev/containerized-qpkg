@@ -17,8 +17,15 @@ build:
 		$(MAKE) -$(MAKEFLAGS) _build; \
 	fi
 
-_build:
+_build: download_image
 	fakeroot /usr/share/qdk2/QDK/bin/qbuild --build-dir build --xz amd64 && \
 	cp -vf build/*.qpkg $(DATA_DIR)
+
+download_image:
+	docker pull postgres:11.4
+	docker pull dockage/phppgadmin:latest
+	docker save -o ./x86_64/phppgadmin.tar dockage/phppgadmin:latest
+	docker save -o ./x86_64/postgres_11_4.tar postgres:11.4
+
 clean:
 	rm -rf data
