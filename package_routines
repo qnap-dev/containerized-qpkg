@@ -112,7 +112,7 @@ PKG_POST_REMOVE="{
     DOCKER_NAME="container-station"
     DOCKER_ROOT=`/sbin/getcfg $DOCKER_NAME Install_Path -f ${CONF}`
     $DOCKER_ROOT/bin/system-docker rmi postgres:11.4
-    $DOCKER_ROOT/bin/system-docker rmi dockage/phppgadmin:latest
+    $DOCKER_ROOT/bin/system-docker rmi edhongcy/phppgadmin:latest
 }"
 #
 ######################################################################
