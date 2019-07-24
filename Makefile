@@ -23,8 +23,8 @@ _build: download_image
 
 download_image:
 	docker pull postgres:11.4
-	docker pull dockage/phppgadmin:latest
-	docker save -o ./x86_64/phppgadmin.tar dockage/phppgadmin:latest
+	docker pull edhongcy/phppgadmin:latest
+	docker save -o ./x86_64/phppgadmin.tar edhongcy/phppgadmin:latest
 	docker save -o ./x86_64/postgres_11_4.tar postgres:11.4
 
 clean:
