@@ -1,13 +1,19 @@
+.runner: &runner
+  image: registry.qnap.me/gitlab/docker-runner:latest
+  tags:
+    - docker
+  before_script:
+    - docker login -u $REGISTRY_USER -p $REGISTRY_PASSWORD registry.qnap.me
+
 stages:
   - build
 
 build:qpkg:
   stage: build
+  <<: *runner
   image:
     name: registry.qnap.me/qnap/qpkg-builder:latest
     entrypoint: [""]
-  tags:
-    - qpkg-runner
   variables:
     TZ: Asia/Taipei
     BUILD_NUMBER: $CI_PIPELINE_IID
