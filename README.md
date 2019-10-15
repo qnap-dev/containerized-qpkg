@@ -18,15 +18,25 @@
     https://github.com/qnap-dev/QDK#how-to-install-qdk-in-ubuntu
 
 2. github postgresql project:  
-
+   https://github.com/qnap-dev/containerized-qpkg.git
 ---
-## step 2 build docker image
+## step 2 create qpkg project
+
+1. generate qpkg project
+   ```
+    $ qbuild --create-env postgresql
+    $ # or
+    $ git clone https://github.com/qnap-dev/containerized-qpkg.git
+
+   ```
+## step 3 build docker image and create docker-compose.yml
 1. Create Dockerfile    
     ref:https://docs.docker.com/engine/reference/builder/
 2. Build and pull docker image
     ```
-    [~/postgresql] # docker build -t phppgadmin:latest .
-    [~/postgresql] # docker pull postgres:11.4
+	$ cd project_name
+    [~/project_name] # docker build -t phppgadmin:latest .
+    [~/project_name] # docker pull postgres:11.4
     ```
 
 3. save docker image to tar file
@@ -37,22 +47,13 @@
     $ docker save -o  phppgadmin.tar phppgadmin:latest
     $ docker save -o  postgres_11_4.tar postgres:11.4
     ```
----
-## step 3 create qpkg project
 
-1. generate qpkg project
+4. move docker image tar file to qpkg arch file
    ```
-    $ qbuild --create-env postgresql
-    $ # or
-    $ git clone 
-
+    $ mv phppgadmin.tar ./x86_64
+    $ mv postgres_11_4.tar ./x86_64
    ```
-2. move docker image tar file to qpkg arch file
-   ```
-    $ mv phppgadmin.tar postgresql/x86_64
-    $ mv postgres_11_4.tar postgresql/x86_64
-   ```
-3. create docker-compose.yml 
+5. create docker-compose.yml 
     ref:https://docs.docker.com/compose/
    ```bash
     version: '3'
@@ -103,9 +104,9 @@
           - PHP_PG_ADMIN_AJAX_REFRESH=3
 
    ```
-4. move docker-compose.yml to qpkg arch file
+6. move docker-compose.yml to qpkg arch file
    ```
-    $ mv docker-compose.yml postgresql/x86_64
+    $ mv docker-compose.yml ./x86_64
    ```
 ---
 ## step 4 edit qpkg configuration start-stop script
@@ -250,7 +251,7 @@
 ## step 5 generate QPKG file
 1. Use below command to build the QPKG file
     ```
-    [~/postgresql] # qbuild
+    [~/project_name] # qbuild
     Creating archive with data files...
     Creating archive with control files...
     Creating QPKG package...
@@ -258,8 +259,8 @@
 2. The QPKG file will be generated in the build folder
 
     ```
-    [~/postgresql] # cd build/
-    [~/postgresql/build] # ls
+    [~/project_name] # cd build/
+    [~/project_name/build] # ls
     postgresql_11.4.1_x86_64.qpkg
     ```
 ---
