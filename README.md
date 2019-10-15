@@ -1,14 +1,14 @@
 # This project is teaching how to build containerized qpkg
 
-- [step 1: ready development environment](#step-1:-ready-development-environment)
-- [step 2: build docker image](#step-2:-build-docker-image)
-- [step 3: create qpkg project](#step-3:-create-qpkg-project)
-- [step 4: edit qpkg configuration and start-stop script](#step-4-edit-qpkg-configuration-start-stop-script)
-- [step 5: generate QPKG file](#step-5:-generate-qpkg-file)
+- [step 1 ready development environment](#step-1-ready-development-environment)
+- [step 2 build docker image](#step-2-build-docker-image)
+- [step 3 create qpkg project](#step-3-create-qpkg-project)
+- [step 4 edit qpkg configuration and start-stop script](#step-4-edit-qpkg-configuration-start-stop-script)
+- [step 5 generate QPKG file](#step-5-generate-qpkg-file)
 - [reference](#reference)
 
 ---
-## step 1: ready development environment
+## step 1 ready development environment
 
 1. How to install QDK
     > a. Install QDK on QNAP NAS:  
@@ -20,13 +20,13 @@
 2. github postgresql project:  
 
 ---
-## step 2: build docker image
+## step 2 build docker image
 1. Create Dockerfile    
     ref:https://docs.docker.com/engine/reference/builder/
 2. Build and pull docker image
     ```
-    $ docker build -t phppgadmin:latest .
-    $ docker pull postgres:11.4
+    [~/postgresql] # docker build -t phppgadmin:latest .
+    [~/postgresql] # docker pull postgres:11.4
     ```
 
 3. save docker image to tar file
@@ -38,13 +38,13 @@
     $ docker save -o  postgres_11_4.tar postgres:11.4
     ```
 ---
-## step 3: create qpkg project
+## step 3 create qpkg project
 
 1. generate qpkg project
    ```
     $ qbuild --create-env postgresql
     $ # or
-    $ git clone
+    $ git clone 
 
    ```
 2. move docker image tar file to qpkg arch file
@@ -108,7 +108,7 @@
     $ mv docker-compose.yml postgresql/x86_64
    ```
 ---
-## step 4: edit qpkg configuration start-stop script
+## step 4 edit qpkg configuration start-stop script
 
 1. edit package\_routines  
    ref: https://edhongcy.gitbooks.io/qdk-qpkg-development-kit/content/package-specific-installation-functions.html
@@ -247,7 +247,7 @@
     QTS_MAX_VERSION="4.5.0"    
    ```
 ---
-## step 5: generate QPKG file
+## step 5 generate QPKG file
 1. Use below command to build the QPKG file
     ```
     [~/postgresql] # qbuild
