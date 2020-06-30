@@ -1,46 +1,53 @@
 version: '3'
 
 services:
-  db:
-    image: postgres:11.4
-    restart: on-failure
+  owncloud:
+    image: owncloud/server:latest
+    restart: always
     ports:
-      - 5432:5432
-    volumes:
-      - ./data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_PASSWORD=postgres
-
-  web:
-    image: edhongcy/phppgadmin:latest
-    restart: on-failure
-    ports:
-      - 7070:80
-      - 7443:443
+      - 8810:8080
     depends_on:
       - db
+      - redis
     environment:
-      - PHP_PG_ADMIN_SERVER_DESC=PostgreSQL
-      - PHP_PG_ADMIN_SERVER_HOST=db
-      - PHP_PG_ADMIN_SERVER_PORT=5432
-      - PHP_PG_ADMIN_SERVER_SSL_MODE=allow
-      - PHP_PG_ADMIN_SERVER_DEFAULT_DB=template1
-      - PHP_PG_ADMIN_SERVER_PG_DUMP_PATH=/usr/bin/pg_dump
-      - PHP_PG_ADMIN_SERVER_PG_DUMPALL_PATH=/usr/bin/pg_dumpall
+      - OWNCLOUD_DB_TYPE=mysql
+      - OWNCLOUD_DB_NAME=owncloud
+      - OWNCLOUD_DB_USERNAME=owncloud
+      - OWNCLOUD_DB_PASSWORD=owncloud
+      - OWNCLOUD_DB_HOST=db
+      - OWNCLOUD_ADMIN_USERNAME=admin
+      - OWNCLOUD_ADMIN_PASSWORD=admin
+      - OWNCLOUD_MYSQL_UTF8MB4=true
+      - OWNCLOUD_REDIS_ENABLED=true
+      - OWNCLOUD_REDIS_HOST=redis
+      - OWNCLOUD_OVERWRITE_WEBROOT=/owncloud
+    volumes:
+      - ${PWD}/data/owncloud:/mnt/data
 
-      - PHP_PG_ADMIN_DEFAULT_LANG=auto
-      - PHP_PG_ADMIN_AUTO_COMPLETE=default on
-      - PHP_PG_ADMIN_EXTRA_LOGIN_SECURITY=false
-      - PHP_PG_ADMIN_OWNED_ONLY=false
-      - PHP_PG_ADMIN_SHOW_COMMENTS=true
-      - PHP_PG_ADMIN_SHOW_ADVANCED=false
-      - PHP_PG_ADMIN_SHOW_SYSTEM=false
-      - PHP_PG_ADMIN_MIN_PASSWORD_LENGTH=1
-      - PHP_PG_ADMIN_LEFT_WIDTH=200
-      - PHP_PG_ADMIN_THEME=default
-      - PHP_PG_ADMIN_SHOW_OIDS=false
-      - PHP_PG_ADMIN_MAX_ROWS=30
-      - PHP_PG_ADMIN_MAX_CHARS=50
-      - PHP_PG_ADMIN_USE_XHTML_STRICT=false
-      - PHP_PG_ADMIN_HELP_BASE=http://www.postgresql.org/docs/%s/interactive/
-      - PHP_PG_ADMIN_AJAX_REFRESH=3
+  db:
+    image: webhippie/mariadb:latest
+    restart: always
+    environment:
+      - MARIADB_ROOT_PASSWORD=owncloud
+      - MARIADB_USERNAME=owncloud
+      - MARIADB_PASSWORD=owncloud
+      - MARIADB_DATABASE=owncloud
+      - MARIADB_MAX_ALLOWED_PACKET=128M
+      - MARIADB_INNODB_LOG_FILE_SIZE=64M
+    volumes:
+      - ${PWD}/data/mysql:/var/lib/mysql
+      - ${PWD}/data/backup:/var/lib/backup
+
+  redis:
+    image: webhippie/redis:latest
+    restart: always
+    environment:
+      - REDIS_DATABASES=1
+    volumes:
+      - redis:/var/lib/redis
+
+volumes:
+  redis:
+
+networks:
+  default:

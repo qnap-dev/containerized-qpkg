@@ -1,275 +1,445 @@
 # This project is teaching how to build containerized qpkg
 
-- [step 1 ready development environment](#step-1-ready-development-environment)
-- [step 2 build docker image](#step-2-build-docker-image)
-- [step 3 create qpkg project](#step-3-create-qpkg-project)
-- [step 4 edit qpkg configuration and start-stop script](#step-4-edit-qpkg-configuration-start-stop-script)
-- [step 5 generate QPKG file](#step-5-generate-qpkg-file)
-- [reference](#reference)
+ - [Step 0 Ready build containerized qpkg Environment](#step-0-ready-build-containerized-qpkg-environment)
+ - [Step 1 Download Sample Code](#step-1-download-sample-code)
+ - [Step 2 Ready Build QPKG Environment Dockerfile](#step-2-ready-build-qpkg-environment-dockerfile)
+ - [step 3 create docker-compose.yml](#step-3-create-docker-composeyml)
+ - [Step 4 Edit qpkg Configuration Start-Stop Script](#step-4-edit-qpkg-configuration-start-stop-script)
+ - [Step 5 Generate QPKG File](#step-5-generate-qpkg-file)
+ - [Download Other Sample Code](#download-other-sample-code)
+ - [reference](#reference)
+---
+## Step 0 Ready build containerized qpkg Environment
+1. [Install Docker Engine](#https://docs.docker.com/engine/install/)
+2. Install Git  
+   It is easiest to install Git on Linux using the preferred package manager of your Linux distribution.
+   ```
+   $ sudo apt-get install git
+   ```
+   For other Linux distribution, please refer to [Download for Linux and Unix](#https://git-scm.com/download/linux).
 
 ---
-## step 1 ready development environment
-
-1. How to install QDK
-    > a. Install QDK on QNAP NAS:  
-    https://github.com/qnap-dev/QDK#qdk-download-link
-    
-    > b. Install QDK on ubuntu:  
-    https://github.com/qnap-dev/QDK#how-to-install-qdk-in-ubuntu
-
-2. github postgresql project:  
-   https://github.com/qnap-dev/containerized-qpkg.git
----
-## step 2 create qpkg project
+## Step 1 Download Sample Code
 
 1. generate qpkg project
    ```
-    $ qbuild --create-env postgresql
-    $ # or
     $ git clone https://github.com/qnap-dev/containerized-qpkg.git
-
    ```
-## step 3 build docker image and create docker-compose.yml
-1. Create Dockerfile    
-    ref:https://docs.docker.com/engine/reference/builder/
-2. Build and pull docker image
-    ```
-	$ cd project_name
-    [~/project_name] # docker build -t phppgadmin:latest .
-    [~/project_name] # docker pull postgres:11.4
-    ```
+---
+## Step 2 Ready Build QPKG Environment Dockerfile
 
-3. save docker image to tar file
-    ```
-    $ docker images
-    REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-    phppgadmin          latest              f68d6e55e065        9 hours ago         109MB
-    $ docker save -o  phppgadmin.tar phppgadmin:latest
-    $ docker save -o  postgres_11_4.tar postgres:11.4
-    ```
+1. build QPKG environment Dockerfile
+   
+   ref:https://docs.docker.com/engine/reference/builder/
+    ```Dockerfile
+    FROM owncloud/ubuntu:18.04
+    LABEL maintainer="consulting@owncloud.com"
 
-4. move docker image tar file to qpkg arch file
-   ```
-    $ mv phppgadmin.tar ./x86_64
-    $ mv postgres_11_4.tar ./x86_64
-   ```
-5. create docker-compose.yml 
+    ARG QDK2_VER=0.29
+    ARG DOCKER_VER=19.03.11
+
+    # Install build essentail tools
+    RUN \
+      apt-get update \
+      && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        curl wget fakeroot rsync pv bsdmainutils ca-certificates openssl xz-utils make \
+      && rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/*
+
+    # Install qdk2
+    RUN \
+      wget https://github.com/qnap-dev/qdk2/releases/download/v${QDK2_VER}/qdk2_${QDK2_VER}.bionic_amd64.deb \
+      && dpkg -i --force-depends qdk2_${QDK2_VER}.bionic_amd64.deb \
+      && rm -f qdk2_${QDK2_VER}.bionic_amd64.deb
+
+    # Install docker client
+    RUN \
+      curl -sq https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VER.tgz \
+      | tar zxf - -C /usr/bin docker/docker --strip-components=1 \
+      && chown root:root /usr/bin/docker
+
+    WORKDIR /work
+    ```
+---
+## step 3 create docker-compose.yml
+1. create docker-compose.yml
+    
     ref:https://docs.docker.com/compose/
-   ```bash
+    ```yaml
     version: '3'
 
     services:
-      db:
-        image: postgres:11.4
-        restart: on-failure
+      owncloud:
+        image: owncloud/server:latest
+        restart: always
         ports:
-          - 5432:5432
-        volumes:
-          - ./data:/var/lib/postgresql/data
-        environment:
-          - POSTGRES_PASSWORD=postgres
-
-      web:
-        image: edhongcy/phppgadmin:latest
-        restart: on-failure
-        ports:
-          - 7070:80
-          - 7443:443
+          - 8810:8080
         depends_on:
           - db
+          - redis
         environment:
-          - PHP_PG_ADMIN_SERVER_DESC=PostgreSQL
-          - PHP_PG_ADMIN_SERVER_HOST=db
-          - PHP_PG_ADMIN_SERVER_PORT=5432
-          - PHP_PG_ADMIN_SERVER_SSL_MODE=allow
-          - PHP_PG_ADMIN_SERVER_DEFAULT_DB=template1
-          - PHP_PG_ADMIN_SERVER_PG_DUMP_PATH=/usr/bin/pg_dump
-          - PHP_PG_ADMIN_SERVER_PG_DUMPALL_PATH=/usr/bin/pg_dumpall
+          - OWNCLOUD_DB_TYPE=mysql
+          - OWNCLOUD_DB_NAME=owncloud
+          - OWNCLOUD_DB_USERNAME=owncloud
+          - OWNCLOUD_DB_PASSWORD=owncloud
+          - OWNCLOUD_DB_HOST=db
+          - OWNCLOUD_ADMIN_USERNAME=admin
+          - OWNCLOUD_ADMIN_PASSWORD=admin
+          - OWNCLOUD_MYSQL_UTF8MB4=true
+          - OWNCLOUD_REDIS_ENABLED=true
+          - OWNCLOUD_REDIS_HOST=redis
+          - OWNCLOUD_OVERWRITE_WEBROOT=/owncloud
+        volumes:
+          - ${PWD}/data/owncloud:/mnt/data
 
-          - PHP_PG_ADMIN_DEFAULT_LANG=auto
-          - PHP_PG_ADMIN_AUTO_COMPLETE=default on
-          - PHP_PG_ADMIN_EXTRA_LOGIN_SECURITY=false
-          - PHP_PG_ADMIN_OWNED_ONLY=false
-          - PHP_PG_ADMIN_SHOW_COMMENTS=true
-          - PHP_PG_ADMIN_SHOW_ADVANCED=false
-          - PHP_PG_ADMIN_SHOW_SYSTEM=false
-          - PHP_PG_ADMIN_MIN_PASSWORD_LENGTH=1
-          - PHP_PG_ADMIN_LEFT_WIDTH=200
-          - PHP_PG_ADMIN_THEME=default
-          - PHP_PG_ADMIN_SHOW_OIDS=false
-          - PHP_PG_ADMIN_MAX_ROWS=30
-          - PHP_PG_ADMIN_MAX_CHARS=50
-          - PHP_PG_ADMIN_USE_XHTML_STRICT=false
-          - PHP_PG_ADMIN_HELP_BASE=http://www.postgresql.org/docs/%s/interactive/
-          - PHP_PG_ADMIN_AJAX_REFRESH=3
+      db:
+        image: webhippie/mariadb:latest
+        restart: always
+        environment:
+          - MARIADB_ROOT_PASSWORD=owncloud
+          - MARIADB_USERNAME=owncloud
+          - MARIADB_PASSWORD=owncloud
+          - MARIADB_DATABASE=owncloud
+          - MARIADB_MAX_ALLOWED_PACKET=128M
+          - MARIADB_INNODB_LOG_FILE_SIZE=64M
+        volumes:
+          - ${PWD}/data/mysql:/var/lib/mysql
+          - ${PWD}/data/backup:/var/lib/backup
 
-   ```
-6. move docker-compose.yml to qpkg arch file
-   ```
+      redis:
+        image: webhippie/redis:latest
+        restart: always
+        environment:
+          - REDIS_DATABASES=1
+        volumes:
+          - redis:/var/lib/redis
+
+      volumes:
+        redis:
+
+      networks:
+        default:
+    ```
+2. move docker-compose.yml to qpkg arch file
+   ```bash
     $ mv docker-compose.yml ./x86_64
    ```
 ---
-## step 4 edit qpkg configuration start-stop script
+## Step 4 Edit qpkg Configuration Start-Stop Script
 
 1. edit package\_routines  
    ref: https://edhongcy.gitbooks.io/qdk-qpkg-development-kit/content/package-specific-installation-functions.html
-   ```bash   
-   ######################################################################
-   # Define any package specific operations that shall be performed when
-   # the package is removed.
-   ######################################################################
-   PKG_POST_REMOVE="{
-       CONF=/etc/config/qpkg.conf
-       DOCKER_NAME="container-station"
-       DOCKER_ROOT=`/sbin/getcfg $DOCKER_NAME Install_Path -f ${CONF}`
-       $DOCKER_ROOT/bin/system-docker rmi postgres:11.4
-       $DOCKER_ROOT/bin/system-docker rmi edhongcy/phppgadmin:latest
-   }"
-   #
-   ######################################################################
-   # Define any package specific operations that shall be performed when
-   # the package is installed.
-   ######################################################################
-   pkg_pre_install(){
-     err_log() {
-       local write_msg="$CMD_LOG_TOOL -t2 -uSystem -p127.0.0.1 -mlocalhost -a"
-       [ -n "$1" ] && $CMD_ECHO "$1" && $write_msg "$1"
-     }
+    ```bash 
+    ######################################################################
+    # Define any package specific operations that shall be performed when
+    # the package is installed.
+    ######################################################################  
+    pkg_pre_install(){
+      err_log() {
+        local write_msg="$CMD_LOG_TOOL -t2 -uSystem -p127.0.0.1 -mlocalhost -a"
+        [ -n "$1" ] && $CMD_ECHO "$1" && $write_msg "$1"
+      }
 
-   # Official QPKG will enable it when installed
-     SYS_QPKG_SERVICE_ENABLED="TRUE"
-     result=$(/usr/sbin/lsof -i :5432)
-     if [ -n "$result"  ] ;then
-       err_log "[App Center] PostgreSQL installation failed. Port 5432 occupied"
-       set_progress_fail
-       exit 1
-     fi
-   }
-   #
-   #pkg_install(){
-   #}
-   #
-   pkg_post_install(){
-     CONF=/etc/config/qpkg.conf
-     QPKG_NAME="postgresql"
-     QPKG_INSTALL_PATH=`/sbin/getcfg ${QPKG_NAME} Install_Path -f ${CONF}`
-     DOCKER_NAME="container-station"
-     DOCKER_ROOT=`/sbin/getcfg $DOCKER_NAME Install_Path -f ${CONF}`
+      # Official QPKG will enable it when installed
+      SYS_QPKG_SERVICE_ENABLED="TRUE"
+      result=$(/usr/sbin/lsof -i :8810)
+      if [ -n "$result"  ] ;then
+        err_log "[App Center] ownCloud installation failed. Port 8810 occupied"
+        set_progress_fail
+        exit 1
+      fi
+    }
+    #
+    #pkg_install(){
+    #}
+    #
+    #pkg_post_install(){
+    #}
+    ```
 
-     if [ -f "$QPKG_INSTALL_PATH/phppgadmin.tar" ]; then
-         $DOCKER_ROOT/bin/system-docker load -i $QPKG_INSTALL_PATH/phppgadmin.tar 
-         $DOCKER_ROOT/bin/system-docker load -i $QPKG_INSTALL_PATH/postgres_11_4.tar
-     fi
-   }
+2. edit ownCloud.sh\(start-stop script\)
 
-   ```
-
-2. edit postgresql.sh\(start-stop script\)
-
-   ```bash
+    ```bash
     #!/bin/sh
-    CONF=/etc/config/qpkg.conf
-    QPKG_NAME="postgresql"
-    QPKG_INSTALL_PATH=`/sbin/getcfg ${QPKG_NAME} Install_Path -f ${CONF}`
-    DOCKER_NAME="container-station"
-    DOCKER_ROOT=`/sbin/getcfg $DOCKER_NAME Install_Path -f ${CONF}`
+
+    # change to persistent folder (otherwise in /share/CACHEDEV1_DATA/.qpkg/.tmp)
+    cd /tmp
+
+    # QPKG Information
+    QPKG_NAME="owncloud"
+    QPKG_CONF=/etc/config/qpkg.conf
+    QPKG_DIR=$(/sbin/getcfg $QPKG_NAME Install_Path -f $QPKG_CONF)
+    QCS_NAME="container-station"
+    QCS_QPKG_DIR=$(/sbin/getcfg $QCS_NAME Install_Path -f $QPKG_CONF)
+    QPKG_PROXY_FILE=/etc/container-proxy.d/$QPKG_NAME
+    DOCKER_IMAGES=$(cat $QPKG_DIR/docker-images/DOCKER_IMAGES)
+
+    DOCKER_CMD=$QCS_QPKG_DIR/bin/system-docker
+    COMPOSE_CMD=$QCS_QPKG_DIR/bin/system-docker-compose
+
+    load_image() {
+      for docker_image in $DOCKER_IMAGES; do
+        # check if image exist
+        STATUS=$(curl -siL http://127.0.0.1:2375/images/$docker_image/json | grep HTTP)
+        if [[ ! $STATUS == *"200"* ]]; then
+          cat $QPKG_DIR/docker-images/$(echo $docker_image | sed -e 's?/?-?' -e 's?:?_?').tar | $DOCKER_CMD load
+        fi
+      done
+    }
+
+    proxy_reload() {
+      /etc/init.d/thttpd.sh reload
+      /etc/init.d/stunnel.sh reload
+    }
+
+    proxy_start() {
+      cat > $QPKG_PROXY_FILE << EOF
+    ProxyRequests off
+    ProxyPass /$QPKG_NAME http://127.0.0.1:8810
+    ProxyPassReverse /$QPKG_NAME http://127.0.0.1:8810
+    EOF
+      proxy_reload
+    }
+
+    proxy_stop() {
+      rm -f $QPKG_PROXY_FILE
+      proxy_reload
+    }
+
+    cd $QPKG_DIR
 
     case "$1" in
       start)
-        ENABLED=$(/sbin/getcfg $QPKG_NAME Enable -u -d FALSE -f $CONF)
+        ENABLED=$(/sbin/getcfg $QPKG_NAME Enable -u -d FALSE -f $QPKG_CONF)
         if [ "$ENABLED" != "TRUE" ]; then
-             echo "$QPKG_NAME is disabled."
-             exit 1
+          echo "$QPKG_NAME is disabled."
+          exit 1
         fi
-           cd $QPKG_INSTALL_PATH
-           $DOCKER_ROOT/bin/system-docker-compose -f $QPKG_INSTALL_PATH/docker-compose.yml up -d
 
+        load_image
+        $COMPOSE_CMD up -d
+        proxy_start
         ;;
-
       stop)
-           $DOCKER_ROOT/bin/system-docker-compose -f $QPKG_INSTALL_PATH/docker-compose.yml down
+        proxy_stop
+        $COMPOSE_CMD down --remove-orphans
         ;;
-
       restart)
         $0 stop
         $0 start
         ;;
-
+      remove)
+        $COMPOSE_CMD down --rmi all -v
+        ;;
       *)
         echo "Usage: $0 {start|stop|restart}"
         exit 1
     esac
 
     exit 0
-   ```
+    ```
 
 3. edit qpkg.cfg  
    ref: https://edhongcy.gitbooks.io/qdk-qpkg-development-kit/content/qpkg-configuration-file.html
 
-   ```
-    # Name of the packaged application.                                                                                                                           QPKG_NAME="postgresql"                                                          
-    # Name of the display application.                                              
-    QPKG_DISPLAY_NAME="PostgreSQL"                                                  
-    # Version of the packaged application.                                          
-    QPKG_VER="11.4.1"                                                               
-    # Author or maintainer of the package                                           
-    QPKG_AUTHOR="QNAP Systems, Inc."                                                
-    # License for the packaged application                                          
-    #QPKG_LICENSE=""                                                                
-    # One-line description of the packaged application                              
-    #QPKG_SUMMARY=""                                                                
-                                                                                
-    # Preferred number in start/stop sequence.                                      
-    QPKG_RC_NUM="101"                                                               
-    # Init-script used to control the start and stop of the installed application.  
-    QPKG_SERVICE_PROGRAM="postgresql.sh"                                            
-                                                                                
-    # Specifies any packages required for the current package to operate.           
-    QPKG_REQUIRE="container-station >= 2.0"                                         
-    # Specifies what packages cannot be installed if the current package            
-    # is to operate properly.                                                       
-    # QPKG_CONFLICT=""                                                              
-    # Name of configuration file (multiple definitions are allowed).                
-    # QPKG_CONFIG="myApp.conf"                                                      
-    # QPKG_CONFIG="/etc/config/myApp.conf"                                          
-    # Port number used by service program.                                          
-    # QPKG_SERVICE_PORT="7070"                                                      
-    # Location of file with running service's PID                                   
-    # QPKG_SERVICE_PIDFILE=""                                                       
-    # Relative path to web interface                                                
-    QPKG_WEBUI="/"                                                                  
-    # Port number for the web interface.                                            
-    QPKG_WEB_PORT="7070"                                                            
-    # Port number for the SSL web interface.                                        
-    #QPKG_WEB_SSL_PORT="7443"                                                       
-    # Minimum QTS version requirement                                               
-    QTS_MINI_VERSION="4.4.1"                                                        
-    # Maximum QTS version requirement                                               
-    QTS_MAX_VERSION="4.5.0"    
-   ```
----
-## step 5 generate QPKG file
-1. Use below command to build the QPKG file
     ```
-    [~/project_name] # qbuild
-    Creating archive with data files...
-    Creating archive with control files...
-    Creating QPKG package...
-    ```
-2. The QPKG file will be generated in the build folder
+    # Name of the packaged application.
+    QPKG_NAME="owncloud"
+    # Name of the display application.
+    QPKG_DISPLAY_NAME="ownCloud"
+    # Version of the packaged application. 
+    QPKG_VER="10.4.1"
+    # Author or maintainer of the package
+    QPKG_AUTHOR="ownCloud"
+    # License for the packaged application
+    QPKG_LICENSE="AGPL"
+    # One-line description of the packaged application
+    #QPKG_SUMMARY=""
 
+    # Preferred number in start/stop sequence.
+    QPKG_RC_NUM="199"
+    # Init-script used to control the start and stop of the installed application.
+    QPKG_SERVICE_PROGRAM="ownCloud.sh"
+
+    # Specifies any packages required for the current package to operate.
+    QPKG_REQUIRE="container-station >= 2.0"
+    # Specifies what packages cannot be installed if the current package
+    # is to operate properly.
+    # QPKG_CONFLICT=""
+    # Name of configuration file (multiple definitions are allowed).
+    # QPKG_CONFIG="myApp.conf"
+    # QPKG_CONFIG="/etc/config/myApp.conf"
+    # Port number used by service program.
+    # QPKG_SERVICE_PORT="7070"
+    # Location of file with running service's PID
+    # QPKG_SERVICE_PIDFILE=""
+    # Relative path to web interface
+    QPKG_WEBUI="/owncloud/"
+    # Port number for the web interface.
+    QPKG_WEB_PORT="-1"
+    # Port number for the SSL web interface.
+    #QPKG_WEB_SSL_PORT="7443"
+
+    # Minimum QTS version requirement
+    QTS_MINI_VERSION="4.4.1"
+    # Maximum QTS version requirement
+    QTS_MAX_VERSION="4.5.0"
+
+    # Select volume
+    # 1: support installation
+    # 2: support migration
+    # 3 (1+2): support both installation and migration
+    QPKG_VOLUME_SELECT=3
+
+    # Location of the chroot environment (only TS-x09)
+    #QPKG_ROOTFS=""
+    # Init-script used to controls the start and stop of the
+    # installed application (only TS-x09)
+    #QPKG_SERVICE_PROGRAM_CHROOT=""
+    QPKG_TIMEOUT="180,180"
+    # Location of icons for the packaged application.
+    QDK_DATA_DIR_ICONS="icons"
+    # Location of files specific to arm-x09 packages.
+    #QDK_DATA_DIR_X09="arm-x09"
+    # Location of files specific to arm-x19 packages.
+    #QDK_DATA_DIR_X19="arm-x19"
+    # Location of files specific to aarch64 packages.
+    #QDK_DATA_DIR_ARM_64="arm_64"
+    # Location of files specific to x86 packages.
+    #QDK_DATA_DIR_X86="x86"
+    # Location of files specific to x86 (64-bit) packages.
+    QDK_DATA_DIR_X86_64="x86_64"
+    # Location of files common to all architectures.
+    QDK_DATA_DIR_SHARED="shared"
+    # Location of configuration files.
+    #QDK_DATA_DIR_CONFIG="config"
+    # Name of local data package.
+    #QDK_DATA_FILE=""
+    # Name of extra package (multiple definitions are allowed).
+    #QDK_EXTRA_FILE=""
+    # Official QPKG will be enable automatically when installed
+    #SYS_QPKG_SERVICE_ENABLED="TRUE"
+    # Script to adapt the data package files (such as file owner)
+    #QDK_DATA_PACKAGE_ADAPTOR=data_package_adaptor
+    # Location of building script for each architecture
+    #QDK_PRE_BUILD="src/build.sh"
+    #QNAP_CODE_SIGNING="1"
+    #QNAP_CODE_SIGNING_SERVER_IP="172.17.21.68"
+    #QNAP_CODE_SIGNING_SERVER_PORT="5000"
+    #QNAP_CODE_SIGNING_CSV="build_sign.csv"
     ```
-    [~/project_name] # cd build/
-    [~/project_name/build] # ls
-    postgresql_11.4.1_x86_64.qpkg
+---
+## Step 5 Generate QPKG File
+1. create Makefile  
+(build QPKG environment docker image and pull docker-compose used docker image save to x86_64 folder)
+
+    ```Makefile
+    SHELL              := /bin/bash
+    BUILDER_IMAGE_NAME := qnap/qpkg-builder
+    BUILD_DIR          := build
+    SUPPORT_ARCH       := x86_64
+    CODESIGNING_TOKEN  ?=
+
+    COLOR_YELLOW       := \033[33m
+    COLOR_BLUE         := \033[34m
+    COLOR_RESET        := \033[0m
+
+    .PHONY: build
+    build: docker-builder
+      @if [ ! -f /.dockerenv ]; then \
+        docker run --rm -t --name=build-owncloud-qpkg-$$$$ \
+          -e QNAP_CODESIGNING_TOKEN=$(CODESIGNING_TOKEN) \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v $(PWD):/work \
+          $(BUILDER_IMAGE_NAME) make _build; \
+      else \
+        $(MAKE) -$(MAKEFLAGS) _build; \
+      fi
+
+    .PHONY: _build
+    _build: docker-image
+      @echo -e "$(COLOR_BLUE)### Build QPKG ...$(COLOR_RESET)"
+      fakeroot /usr/share/qdk2/QDK/bin/qbuild --build-dir $(BUILD_DIR) --xz amd64
+
+    .PHONY: docker-builder
+    docker-builder:
+      @echo -e "$(COLOR_BLUE)### Prepare QPKG builder: $(BUILDER_IMAGE_NAME)$(COLOR_RESET)"
+      docker build -t $(BUILDER_IMAGE_NAME) .
+
+    .PHONY: docker-image
+    docker-image:
+      @for img in $(shell awk -F'image: ' '/image:/ {print $$2}' x86_64/docker-compose.yml); do \
+        tarball=$$(echo $${img} | sed -e 's?/?-?' -e 's?:?_?').tar; \
+        echo -e "$(COLOR_BLUE)### Download container image: $${img}$(COLOR_RESET)"; \
+        docker pull $${img}; \
+        echo -e "$(COLOR_YELLOW)### Save container image to a tar archive: $${tarball}$(COLOR_RESET)"; \
+        mkdir -p x86_64/docker-images; \
+        echo $${img} >> x86_64/docker-images/DOCKER_IMAGES; \
+        docker save -o x86_64/docker-images/$${tarball} $${img}; \
+      done
+
+    .PHONY: clean
+    clean:
+      @echo -e "$(COLOR_BLUE)### Remove build files ...$(COLOR_RESET)"
+      rm -rf */{data,docker-images}
+      rm -rf build{,.*}/ tmp.*/
     ```
+2. Use below command to build the QPKG file
+    ```bash
+    [~/project_name] # make
+    ```
+3. The QPKG file will be generated in the build folder
+
+    ```bash
+    [~/project_name] # ls -la build
+    total 243476
+    drwxr-xr-x 2 root   root        4096 Jun 30 15:23 .
+    drwxrwxr-x 7 edhong edhong      4096 Jun 30 15:23 ..
+    -rw-r--r-- 1 root   root   249306533 Jun 30 15:23 owncloud_10.4.1_x86_64.qpkg
+    -rw-r--r-- 1 root   root          68 Jun 30 15:23 owncloud_10.4.1_x86_64.qpkg.md5
+    ```
+4. Clean up
+    ```bash
+    [~/project_name] # make clean
+    ### Remove build files ...
+    rm -rf */{data,docker-images}
+    rm -rf build{,.*}/ tmp.*/
+    ```
+---
+## Download Other Sample Code
+Docker-QDK2 is a tool for building multi-container Docker applications, and there are many example including in this repository.
+
+Download Docker-QDK2 into your system.
+```
+$ git clone https://github.com/qnap-dev/docker-qdk2.git
+```
+1. Build Nginx QPKG
+   Change directory to docker-qdk2 and build Nginx QPKG.
+    ```bash
+    $ cd docker-qdk2
+    $ sudo docker run -it --rm -v ${PWD}/example/nginx:/work qnap/qpkg-builder
+    root@9fbc71d21743: /work # fakeroot /usr/share/qdk2/QDK/bin/qbuild --xz amd64
+    $ ls example/nginx/build/
+    nginx_1.11.qpkg  nginx_1.11.qpkg.md5
+    ```
+2. Create a GitLab QPKG
+   In this step, you create a GitLab started project by building the QPKG from the build context defined in the previous procedure. Before building the QPKG, you have to add a target of your project in docker-qdk2/example/Makefile.
+
+   Run the following command to build the QPKG.
+    ```bash
+    $ cd docker-qdk2
+    $ sudo docker run -it --rm -v ${PWD}/example:/work qnap/qpkg-builder bash -c "make"
+    ```
+    When procedure completed, the QPKG file would be created in build folder.
 ---
 ## reference
+
+Docker install doc:  
+https://docs.docker.com/engine/install/
 
 Dockerfile doc:  
 https://docs.docker.com/engine/reference/builder/
 
-docker-compose.yml doc:
+docker-compose.yml doc:  
 https://docs.docker.com/compose/
 
 package\_routines doc:  
@@ -280,3 +450,9 @@ https://edhongcy.gitbooks.io/qdk-qpkg-development-kit/content/qpkg-configuration
 
 QDK GitHub:  
 https://github.com/qnap-dev/QDK
+
+qnap-packageing:  
+https://github.com/walkerlee/qnap-packaging
+
+docker-qdk2:  
+https://qnap-dev.github.io/container-station-api/dqpkg.html#download-sample-code

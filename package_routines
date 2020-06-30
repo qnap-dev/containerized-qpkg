@@ -1,4 +1,4 @@
-######################################################################
+ ######################################################################
 # List of available definitions (it's not necessary to uncomment them)
 ######################################################################
 ###### Command definitions #####
@@ -101,19 +101,13 @@
 # the package is removed.
 ######################################################################
 #PKG_PRE_REMOVE="{
-#    
 #}"
 #
 #PKG_MAIN_REMOVE="{
 #}"
 #
-PKG_POST_REMOVE="{
-    CONF=/etc/config/qpkg.conf
-    DOCKER_NAME="container-station"
-    DOCKER_ROOT=`/sbin/getcfg $DOCKER_NAME Install_Path -f ${CONF}`
-    $DOCKER_ROOT/bin/system-docker rmi postgres:11.4
-    $DOCKER_ROOT/bin/system-docker rmi edhongcy/phppgadmin:latest
-}"
+#PKG_POST_REMOVE="{
+#}"
 #
 ######################################################################
 # Define any package specific initialization that shall be performed
@@ -134,33 +128,23 @@ PKG_POST_REMOVE="{
 # the package is installed.
 ######################################################################
 pkg_pre_install(){
-    err_log() {
-        local write_msg="$CMD_LOG_TOOL -t2 -uSystem -p127.0.0.1 -mlocalhost -a"
-        [ -n "$1" ] && $CMD_ECHO "$1" && $write_msg "$1"
-    }
+	err_log() {
+		local write_msg="$CMD_LOG_TOOL -t2 -uSystem -p127.0.0.1 -mlocalhost -a"
+		[ -n "$1" ] && $CMD_ECHO "$1" && $write_msg "$1"
+	}
 
-    # Official QPKG will enable it when installed
-    SYS_QPKG_SERVICE_ENABLED="TRUE"
-    result=$(/usr/sbin/lsof -i :5432)
-    if [ -n "$result"  ] ;then
-        err_log "[App Center] PostgreSQL installation failed. Port 5432 occupied"
-        set_progress_fail
-        exit 1
-    fi
+	# Official QPKG will enable it when installed
+	SYS_QPKG_SERVICE_ENABLED="TRUE"
+	result=$(/usr/sbin/lsof -i :8810)
+	if [ -n "$result"  ] ;then
+		err_log "[App Center] ownCloud installation failed. Port 8810 occupied"
+		set_progress_fail
+		exit 1
+	fi
 }
 #
 #pkg_install(){
 #}
 #
-pkg_post_install(){
-    CONF=/etc/config/qpkg.conf
-    QPKG_NAME="postgresql"
-    QPKG_INSTALL_PATH=`/sbin/getcfg ${QPKG_NAME} Install_Path -f ${CONF}`
-    DOCKER_NAME="container-station"
-    DOCKER_ROOT=`/sbin/getcfg $DOCKER_NAME Install_Path -f ${CONF}`
-
-    if [ -f "$QPKG_INSTALL_PATH/phppgadmin.tar" ]; then
-        $DOCKER_ROOT/bin/system-docker load -i $QPKG_INSTALL_PATH/phppgadmin.tar 
-        $DOCKER_ROOT/bin/system-docker load -i $QPKG_INSTALL_PATH/postgres_11_4.tar
-    fi
-}
+#pkg_post_install(){
+#}
