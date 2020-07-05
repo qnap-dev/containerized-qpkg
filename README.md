@@ -32,24 +32,22 @@
    
    ref:https://docs.docker.com/engine/reference/builder/
     ```Dockerfile
-    FROM owncloud/ubuntu:18.04
-    LABEL maintainer="consulting@owncloud.com"
+    FROM ubuntu:18.04
 
-    ARG QDK2_VER=0.29
     ARG DOCKER_VER=19.03.11
 
     # Install build essentail tools
     RUN \
       apt-get update \
       && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        curl wget fakeroot rsync pv bsdmainutils ca-certificates openssl xz-utils make \
+        git curl wget fakeroot rsync pv bsdmainutils ca-certificates openssl xz-utils make \
       && rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/*
 
-    # Install qdk2
+    # Install QDK
     RUN \
-      wget https://github.com/qnap-dev/qdk2/releases/download/v${QDK2_VER}/qdk2_${QDK2_VER}.bionic_amd64.deb \
-      && dpkg -i --force-depends qdk2_${QDK2_VER}.bionic_amd64.deb \
-      && rm -f qdk2_${QDK2_VER}.bionic_amd64.deb
+      git clone https://github.com/qnap-dev/QDK.git \
+      && cd QDK \
+      && ./InstallToUbuntu.sh install
 
     # Install docker client
     RUN \
@@ -65,59 +63,34 @@
     
     ref:https://docs.docker.com/compose/
     ```yaml
-    version: '3'
+    version: '3.3'
 
     services:
-      owncloud:
-        image: owncloud/server:latest
+      db:
+        image: mysql:5.7
+        volumes:
+          - db_data:/var/lib/mysql
         restart: always
-        ports:
-          - 8810:8080
+        environment:
+          MYSQL_ROOT_PASSWORD: somewordpress
+          MYSQL_DATABASE: wordpress
+          MYSQL_USER: wordpress
+          MYSQL_PASSWORD: wordpress
+
+      wordpress:
         depends_on:
           - db
-          - redis
-        environment:
-          - OWNCLOUD_DB_TYPE=mysql
-          - OWNCLOUD_DB_NAME=owncloud
-          - OWNCLOUD_DB_USERNAME=owncloud
-          - OWNCLOUD_DB_PASSWORD=owncloud
-          - OWNCLOUD_DB_HOST=db
-          - OWNCLOUD_ADMIN_USERNAME=admin
-          - OWNCLOUD_ADMIN_PASSWORD=admin
-          - OWNCLOUD_MYSQL_UTF8MB4=true
-          - OWNCLOUD_REDIS_ENABLED=true
-          - OWNCLOUD_REDIS_HOST=redis
-          - OWNCLOUD_OVERWRITE_WEBROOT=/owncloud
-        volumes:
-          - ${PWD}/data/owncloud:/mnt/data
-
-      db:
-        image: webhippie/mariadb:latest
+        image: wordpress:latest
+        ports:
+          - "8000:80"
         restart: always
         environment:
-          - MARIADB_ROOT_PASSWORD=owncloud
-          - MARIADB_USERNAME=owncloud
-          - MARIADB_PASSWORD=owncloud
-          - MARIADB_DATABASE=owncloud
-          - MARIADB_MAX_ALLOWED_PACKET=128M
-          - MARIADB_INNODB_LOG_FILE_SIZE=64M
-        volumes:
-          - ${PWD}/data/mysql:/var/lib/mysql
-          - ${PWD}/data/backup:/var/lib/backup
-
-      redis:
-        image: webhippie/redis:latest
-        restart: always
-        environment:
-          - REDIS_DATABASES=1
-        volumes:
-          - redis:/var/lib/redis
-
-      volumes:
-        redis:
-
-      networks:
-        default:
+          WORDPRESS_DB_HOST: db:3306
+          WORDPRESS_DB_USER: wordpress
+          WORDPRESS_DB_PASSWORD: wordpress
+          WORDPRESS_DB_NAME: wordpress
+    volumes:
+        db_data: {}
     ```
 2. move docker-compose.yml to qpkg arch file
    ```bash
@@ -143,7 +116,7 @@
       SYS_QPKG_SERVICE_ENABLED="TRUE"
       result=$(/usr/sbin/lsof -i :8810)
       if [ -n "$result"  ] ;then
-        err_log "[App Center] ownCloud installation failed. Port 8810 occupied"
+        err_log "[App Center] wordpress installation failed. Port 8810 occupied"
         set_progress_fail
         exit 1
       fi
@@ -165,7 +138,7 @@
     cd /tmp
 
     # QPKG Information
-    QPKG_NAME="owncloud"
+    QPKG_NAME="wordpress"
     QPKG_CONF=/etc/config/qpkg.conf
     QPKG_DIR=$(/sbin/getcfg $QPKG_NAME Install_Path -f $QPKG_CONF)
     QCS_NAME="container-station"
@@ -243,22 +216,22 @@
 
     ```
     # Name of the packaged application.
-    QPKG_NAME="owncloud"
+    QPKG_NAME="wordpress"
     # Name of the display application.
-    QPKG_DISPLAY_NAME="ownCloud"
+    QPKG_DISPLAY_NAME="wordpress"
     # Version of the packaged application. 
-    QPKG_VER="10.4.1"
+    QPKG_VER="5.4.2"
     # Author or maintainer of the package
-    QPKG_AUTHOR="ownCloud"
+    QPKG_AUTHOR="wordpress"
     # License for the packaged application
-    QPKG_LICENSE="AGPL"
+    # QPKG_LICENSE=""
     # One-line description of the packaged application
     #QPKG_SUMMARY=""
 
     # Preferred number in start/stop sequence.
     QPKG_RC_NUM="199"
     # Init-script used to control the start and stop of the installed application.
-    QPKG_SERVICE_PROGRAM="ownCloud.sh"
+    QPKG_SERVICE_PROGRAM="wordpress.sh"
 
     # Specifies any packages required for the current package to operate.
     QPKG_REQUIRE="container-station >= 2.0"
@@ -453,6 +426,3 @@ https://github.com/qnap-dev/QDK
 
 qnap-packageing:  
 https://github.com/walkerlee/qnap-packaging
-
-docker-qdk2:  
-https://qnap-dev.github.io/container-station-api/dqpkg.html#download-sample-code

@@ -137,7 +137,7 @@ pkg_pre_install(){
 	SYS_QPKG_SERVICE_ENABLED="TRUE"
 	result=$(/usr/sbin/lsof -i :8810)
 	if [ -n "$result"  ] ;then
-		err_log "[App Center] ownCloud installation failed. Port 8810 occupied"
+		err_log "[App Center] wordpress installation failed. Port 8810 occupied"
 		set_progress_fail
 		exit 1
 	fi
