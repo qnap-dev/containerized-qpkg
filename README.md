@@ -6,7 +6,6 @@
  - [step 3 create docker-compose.yml](#step-3-create-docker-composeyml)
  - [Step 4 Edit qpkg Configuration Start-Stop Script](#step-4-edit-qpkg-configuration-start-stop-script)
  - [Step 5 Generate QPKG File](#step-5-generate-qpkg-file)
- - [Download Other Sample Code](#download-other-sample-code)
  - [reference](#reference)
 ---
 ## Step 0 Ready build containerized qpkg Environment
@@ -377,32 +376,6 @@
     rm -rf */{data,docker-images}
     rm -rf build{,.*}/ tmp.*/
     ```
----
-## Download Other Sample Code
-Docker-QDK2 is a tool for building multi-container Docker applications, and there are many example including in this repository.
-
-Download Docker-QDK2 into your system.
-```
-$ git clone https://github.com/qnap-dev/docker-qdk2.git
-```
-1. Build Nginx QPKG
-   Change directory to docker-qdk2 and build Nginx QPKG.
-    ```bash
-    $ cd docker-qdk2
-    $ sudo docker run -it --rm -v ${PWD}/example/nginx:/work qnap/qpkg-builder
-    root@9fbc71d21743: /work # fakeroot /usr/share/qdk2/QDK/bin/qbuild --xz amd64
-    $ ls example/nginx/build/
-    nginx_1.11.qpkg  nginx_1.11.qpkg.md5
-    ```
-2. Create a GitLab QPKG
-   In this step, you create a GitLab started project by building the QPKG from the build context defined in the previous procedure. Before building the QPKG, you have to add a target of your project in docker-qdk2/example/Makefile.
-
-   Run the following command to build the QPKG.
-    ```bash
-    $ cd docker-qdk2
-    $ sudo docker run -it --rm -v ${PWD}/example:/work qnap/qpkg-builder bash -c "make"
-    ```
-    When procedure completed, the QPKG file would be created in build folder.
 ---
 ## reference
 
