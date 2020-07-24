@@ -96,7 +96,7 @@
     $ mv docker-compose.yml ./x86_64
    ```
 ---
-## Step 4 Edit qpkg Configuration Start-Stop Script
+## Step 4 Edit qpkg install Script(package\_routines) and Start-Stop Script
 
 1. edit package\_routines  
    ref: https://edhongcy.gitbooks.io/qdk-qpkg-development-kit/content/package-specific-installation-functions.html
@@ -128,7 +128,7 @@
     #}
     ```
 
-2. edit ownCloud.sh\(start-stop script\)
+2. edit wordpress.sh\(start-stop script\)
 
     ```bash
     #!/bin/sh
