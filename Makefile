@@ -23,7 +23,7 @@ build: docker-builder
 .PHONY: _build
 _build: docker-image
 	@echo -e "$(COLOR_BLUE)### Build QPKG ...$(COLOR_RESET)"
-	fakeroot /usr/share/qdk2/QDK/bin/qbuild --build-dir $(BUILD_DIR) --xz amd64
+	fakeroot /usr/share/QDK/bin/qbuild --build-dir $(BUILD_DIR) --xz amd64
 
 .PHONY: docker-builder
 docker-builder:
