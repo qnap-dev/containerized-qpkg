@@ -20,32 +20,34 @@
 ---
 ## Step 1 Download Sample Code
 
-1. generate qpkg project
+1. Generate qpkg project
    ```
     $ git clone https://github.com/qnap-dev/containerized-qpkg.git
    ```
 ---
 ## Step 2 Ready Build QPKG Environment Dockerfile
 
-1. build QPKG environment Dockerfile
+1. Build QPKG environment Dockerfile
    
    ref:https://docs.docker.com/engine/reference/builder/
     ```Dockerfile
-    FROM ubuntu:18.04
+    FROM ubuntu:20.04
 
-    ARG DOCKER_VER=19.03.11
+    ARG DOCKER_VER=20.10.7
 
     # Install build essentail tools
     RUN \
       apt-get update \
       && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        git curl wget fakeroot rsync pv bsdmainutils ca-certificates openssl xz-utils make \
+         curl wget fakeroot rsync pv bsdmainutils ca-certificates openssl xz-utils make python2 \
       && rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/*
 
-    # Install QDK
+    # Install qdk2
     RUN \
-      git clone https://github.com/qnap-dev/QDK.git \
-      && cd QDK \
+      wget https://github.com/qnap-dev/qdk2/releases/download/v${QDK2_VER}/qdk2_${QDK2_VER}.bionic_amd64.deb \
+      && dpkg -i --force-depends qdk2_${QDK2_VER}.bionic_amd64.deb \
+      && rm -f qdk2_${QDK2_VER}.bionic_amd64.deb
+
       && ./InstallToUbuntu.sh install
 
     # Install docker client
@@ -58,47 +60,46 @@
     ```
 ---
 ## step 3 Create docker-compose.yml
-1. create docker-compose.yml
+1. Create docker-compose.yml
     
     ref:https://docs.docker.com/compose/
     ```yaml
-    version: '3.3'
+    version: '3.1'
 
     services:
-      db:
-        image: mysql:5.7
-        volumes:
-          - db_data:/var/lib/mysql
-        restart: always
-        environment:
-          MYSQL_ROOT_PASSWORD: somewordpress
-          MYSQL_DATABASE: wordpress
-          MYSQL_USER: wordpress
-          MYSQL_PASSWORD: wordpress
 
       wordpress:
-        depends_on:
-          - db
-        image: wordpress:latest
+        image: wordpress:5.7.2
+        restart: always
         ports:
-          - "8000:80"
+          - 65000:80
+        environment:
+          WORDPRESS_DB_HOST: db
+          WORDPRESS_DB_USER: exampleuser
+          WORDPRESS_DB_PASSWORD: examplepass
+          WORDPRESS_DB_NAME: exampledb
+        volumes:
+          - ${PWD}/data/wordpress:/var/www/html
+
+      db:
+        image: mysql:5.7
         restart: always
         environment:
-          WORDPRESS_DB_HOST: db:3306
-          WORDPRESS_DB_USER: wordpress
-          WORDPRESS_DB_PASSWORD: wordpress
-          WORDPRESS_DB_NAME: wordpress
-    volumes:
-        db_data: {}
+          MYSQL_DATABASE: exampledb
+          MYSQL_USER: exampleuser
+          MYSQL_PASSWORD: examplepass
+          MYSQL_RANDOM_ROOT_PASSWORD: '1'
+        volumes:
+          - ${PWD}/data/db:/var/lib/mysql
     ```
-2. move docker-compose.yml to qpkg arch file
+2. Move docker-compose.yml to qpkg arch file
    ```bash
     $ mv docker-compose.yml ./x86_64
    ```
 ---
 ## Step 4 Edit qpkg install Script(package\_routines) and Start-Stop Script
 
-1. edit package\_routines  
+1. Edit package\_routines  
    ref: https://edhongcy.gitbooks.io/qdk-qpkg-development-kit/content/package-specific-installation-functions.html
     ```bash 
     ######################################################################
@@ -113,9 +114,9 @@
 
       # Official QPKG will enable it when installed
       SYS_QPKG_SERVICE_ENABLED="TRUE"
-      result=$(/usr/sbin/lsof -i :8810)
+      result=$(/usr/sbin/lsof -i :65000)
       if [ -n "$result"  ] ;then
-        err_log "[App Center] wordpress installation failed. Port 8810 occupied"
+        err_log "[App Center] WordPress installation failed. Port 65000 occupied"
         set_progress_fail
         exit 1
       fi
@@ -128,7 +129,7 @@
     #}
     ```
 
-2. edit wordpress.sh\(start-stop script\)
+2. Edit start-stop.sh
 
     ```bash
     #!/bin/sh
@@ -137,7 +138,7 @@
     cd /tmp
 
     # QPKG Information
-    QPKG_NAME="wordpress"
+    QPKG_NAME="WordPress"
     QPKG_CONF=/etc/config/qpkg.conf
     QPKG_DIR=$(/sbin/getcfg $QPKG_NAME Install_Path -f $QPKG_CONF)
     QCS_NAME="container-station"
@@ -166,8 +167,8 @@
     proxy_start() {
       cat > $QPKG_PROXY_FILE << EOF
     ProxyRequests off
-    ProxyPass /$QPKG_NAME http://127.0.0.1:8810
-    ProxyPassReverse /$QPKG_NAME http://127.0.0.1:8810
+    ProxyPass /wordpress http://127.0.0.1:65000
+    ProxyPassReverse /wordpress http://127.0.0.1:65000
     EOF
       proxy_reload
     }
@@ -208,53 +209,39 @@
     esac
 
     exit 0
+
     ```
 
-3. edit qpkg.cfg  
+3. Edit qpkg.cfg  
    ref: https://edhongcy.gitbooks.io/qdk-qpkg-development-kit/content/qpkg-configuration-file.html
 
     ```
     # Name of the packaged application.
-    QPKG_NAME="wordpress"
+    QPKG_NAME="WordPress"
     # Name of the display application.
-    QPKG_DISPLAY_NAME="wordpress"
+    QPKG_DISPLAY_NAME="WordPress"
     # Version of the packaged application. 
-    QPKG_VER="5.4.2"
+    QPKG_VER="5.7.2"
     # Author or maintainer of the package
-    QPKG_AUTHOR="wordpress"
+    QPKG_AUTHOR="WordPress"
     # License for the packaged application
-    # QPKG_LICENSE=""
+    QPKG_LICENSE="AGPL"
     # One-line description of the packaged application
     #QPKG_SUMMARY=""
 
     # Preferred number in start/stop sequence.
     QPKG_RC_NUM="199"
     # Init-script used to control the start and stop of the installed application.
-    QPKG_SERVICE_PROGRAM="wordpress.sh"
+    QPKG_SERVICE_PROGRAM="start-stop.sh"
 
     # Specifies any packages required for the current package to operate.
     QPKG_REQUIRE="container-station >= 2.0"
-    # Specifies what packages cannot be installed if the current package
-    # is to operate properly.
-    # QPKG_CONFLICT=""
-    # Name of configuration file (multiple definitions are allowed).
-    # QPKG_CONFIG="myApp.conf"
-    # QPKG_CONFIG="/etc/config/myApp.conf"
-    # Port number used by service program.
-    # QPKG_SERVICE_PORT="7070"
-    # Location of file with running service's PID
-    # QPKG_SERVICE_PIDFILE=""
-    # Relative path to web interface
-    QPKG_WEBUI="/owncloud/"
+    #QPKG_WEBUI=""
     # Port number for the web interface.
-    QPKG_WEB_PORT="-1"
-    # Port number for the SSL web interface.
-    #QPKG_WEB_SSL_PORT="7443"
+    QPKG_WEB_PORT="65000"
 
     # Minimum QTS version requirement
-    QTS_MINI_VERSION="4.4.1"
-    # Maximum QTS version requirement
-    QTS_MAX_VERSION="4.5.0"
+    QTS_MINI_VERSION="4.5.0"
 
     # Select volume
     # 1: support installation
@@ -262,36 +249,13 @@
     # 3 (1+2): support both installation and migration
     QPKG_VOLUME_SELECT=3
 
-    # Location of the chroot environment (only TS-x09)
-    #QPKG_ROOTFS=""
-    # Init-script used to controls the start and stop of the
-    # installed application (only TS-x09)
-    #QPKG_SERVICE_PROGRAM_CHROOT=""
     QPKG_TIMEOUT="180,180"
     # Location of icons for the packaged application.
     QDK_DATA_DIR_ICONS="icons"
-    # Location of files specific to arm-x09 packages.
-    #QDK_DATA_DIR_X09="arm-x09"
-    # Location of files specific to arm-x19 packages.
-    #QDK_DATA_DIR_X19="arm-x19"
-    # Location of files specific to aarch64 packages.
-    #QDK_DATA_DIR_ARM_64="arm_64"
-    # Location of files specific to x86 packages.
-    #QDK_DATA_DIR_X86="x86"
     # Location of files specific to x86 (64-bit) packages.
     QDK_DATA_DIR_X86_64="x86_64"
     # Location of files common to all architectures.
     QDK_DATA_DIR_SHARED="shared"
-    # Location of configuration files.
-    #QDK_DATA_DIR_CONFIG="config"
-    # Name of local data package.
-    #QDK_DATA_FILE=""
-    # Name of extra package (multiple definitions are allowed).
-    #QDK_EXTRA_FILE=""
-    # Official QPKG will be enable automatically when installed
-    #SYS_QPKG_SERVICE_ENABLED="TRUE"
-    # Script to adapt the data package files (such as file owner)
-    #QDK_DATA_PACKAGE_ADAPTOR=data_package_adaptor
     # Location of building script for each architecture
     #QDK_PRE_BUILD="src/build.sh"
     #QNAP_CODE_SIGNING="1"
@@ -301,7 +265,7 @@
     ```
 ---
 ## Step 5 Generate QPKG File
-1. create Makefile  
+1. Create Makefile  
 (build QPKG environment docker image and pull docker-compose used docker image save to x86_64 folder)
 
     ```Makefile
@@ -309,7 +273,7 @@
     BUILDER_IMAGE_NAME := qnap/qpkg-builder
     BUILD_DIR          := build
     SUPPORT_ARCH       := x86_64
-    CODESIGNING_TOKEN  ?=
+    CODESIGNING_TOKEN  ?= 
 
     COLOR_YELLOW       := \033[33m
     COLOR_BLUE         := \033[34m
@@ -318,7 +282,7 @@
     .PHONY: build
     build: docker-builder
       @if [ ! -f /.dockerenv ]; then \
-        docker run --rm -t --name=build-owncloud-qpkg-$$$$ \
+        docker run --rm -t --name=build-capp-qpkg-$$$$ \
           -e QNAP_CODESIGNING_TOKEN=$(CODESIGNING_TOKEN) \
           -v /var/run/docker.sock:/var/run/docker.sock \
           -v $(PWD):/work \
