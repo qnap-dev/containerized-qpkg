@@ -2,7 +2,7 @@ SHELL              := /bin/bash
 BUILDER_IMAGE_NAME := qnap/qpkg-builder
 BUILD_DIR          := build
 SUPPORT_ARCH       := x86_64
-CODESIGNING_TOKEN  ?=
+CODESIGNING_TOKEN  ?= 
 
 COLOR_YELLOW       := \033[33m
 COLOR_BLUE         := \033[34m
@@ -11,7 +11,7 @@ COLOR_RESET        := \033[0m
 .PHONY: build
 build: docker-builder
 	@if [ ! -f /.dockerenv ]; then \
-		docker run --rm -t --name=build-owncloud-qpkg-$$$$ \
+		docker run --rm -t --name=build-capp-qpkg-$$$$ \
 			-e QNAP_CODESIGNING_TOKEN=$(CODESIGNING_TOKEN) \
 			-v /var/run/docker.sock:/var/run/docker.sock \
 			-v $(PWD):/work \
@@ -23,7 +23,7 @@ build: docker-builder
 .PHONY: _build
 _build: docker-image
 	@echo -e "$(COLOR_BLUE)### Build QPKG ...$(COLOR_RESET)"
-	fakeroot /usr/share/QDK/bin/qbuild --build-dir $(BUILD_DIR) --xz amd64
+	fakeroot /usr/share/qdk2/QDK/bin/qbuild --build-dir $(BUILD_DIR) --xz amd64
 
 .PHONY: docker-builder
 docker-builder:

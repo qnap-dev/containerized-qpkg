@@ -4,7 +4,7 @@
 cd /tmp
 
 # QPKG Information
-QPKG_NAME="wordpress"
+QPKG_NAME="WordPress"
 QPKG_CONF=/etc/config/qpkg.conf
 QPKG_DIR=$(/sbin/getcfg $QPKG_NAME Install_Path -f $QPKG_CONF)
 QCS_NAME="container-station"
@@ -33,8 +33,8 @@ proxy_reload() {
 proxy_start() {
 	cat > $QPKG_PROXY_FILE << EOF
 ProxyRequests off
-ProxyPass /$QPKG_NAME http://127.0.0.1:8810
-ProxyPassReverse /$QPKG_NAME http://127.0.0.1:8810
+ProxyPass /wordpress http://127.0.0.1:65000
+ProxyPassReverse /wordpress http://127.0.0.1:65000
 EOF
 	proxy_reload
 }

@@ -135,9 +135,9 @@ pkg_pre_install(){
 
 	# Official QPKG will enable it when installed
 	SYS_QPKG_SERVICE_ENABLED="TRUE"
-	result=$(/usr/sbin/lsof -i :8810)
+	result=$(/usr/sbin/lsof -i :65000)
 	if [ -n "$result"  ] ;then
-		err_log "[App Center] wordpress installation failed. Port 8810 occupied"
+		err_log "[App Center] WordPress installation failed. Port 65000 occupied"
 		set_progress_fail
 		exit 1
 	fi
