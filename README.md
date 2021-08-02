@@ -330,8 +330,8 @@
     total 243476
     drwxr-xr-x 2 root   root        4096 Jun 30 15:23 .
     drwxrwxr-x 7 edhong edhong      4096 Jun 30 15:23 ..
-    -rw-r--r-- 1 root   root   249306533 Jun 30 15:23 wordpress_5,4,2_x86_64.qpkg
-    -rw-r--r-- 1 root   root          68 Jun 30 15:23 wordpress_5.4.2_x86_64.qpkg.md5
+    -rw-r--r-- 1 root   root   200426367 Jun 30 15:23 WordPress_5.7.2_x86_64.qpkg
+    -rw-r--r-- 1 root   root          68 Jun 30 15:23 WordPress_5.7.2_x86_64.qpkg.md5
     ```
 4. Clean up
     ```bash
