@@ -8,7 +8,7 @@ ARG DOCKER_VER=20.10.7
 RUN \
   apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    curl wget fakeroot rsync pv bsdmainutils ca-certificates openssl xz-utils make python2 \
+    curl wget fakeroot rsync pv bsdmainutils ca-certificates openssl xz-utils make python python2 \
   && rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/*
 
 # Install qdk2
