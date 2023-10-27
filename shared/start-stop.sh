@@ -13,7 +13,11 @@ QPKG_PROXY_FILE=/etc/container-proxy.d/$QPKG_NAME
 DOCKER_IMAGES=$(cat $QPKG_DIR/docker-images/DOCKER_IMAGES)
 
 DOCKER_CMD=$QCS_QPKG_DIR/bin/system-docker
-COMPOSE_CMD=$QCS_QPKG_DIR/bin/system-docker-compose
+if [ -f "$QCS_QPKG_DIR/bin/system-docker-compose" ]; then
+  COMPOSE_CMD="$QCS_QPKG_DIR/bin/system-docker-compose"
+else
+  COMPOSE_CMD="$QCS_QPKG_DIR/bin/system-docker compose"
+fi
 
 load_image() {
 	for docker_image in $DOCKER_IMAGES; do
