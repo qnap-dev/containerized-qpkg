@@ -1,7 +1,7 @@
 FROM ubuntu:20.04
 LABEL maintainer=""
 
-ARG QDK2_VER=0.29
+ARG QDK2_VER=0.31
 ARG DOCKER_VER=20.10.7
 
 # Install build essentail tools
@@ -13,9 +13,9 @@ RUN \
 
 # Install qdk2
 RUN \
-  wget https://github.com/qnap-dev/qdk2/releases/download/v${QDK2_VER}/qdk2_${QDK2_VER}.bionic_amd64.deb \
-  && dpkg -i --force-depends qdk2_${QDK2_VER}.bionic_amd64.deb \
-  && rm -f qdk2_${QDK2_VER}.bionic_amd64.deb
+  wget https://github.com/qnap-dev/qdk2/releases/download/v${QDK2_VER}/qdk2_${QDK2_VER}_bionic_amd64.deb \
+  && dpkg -i --force-depends qdk2_${QDK2_VER}_bionic_amd64.deb \
+  && rm -f qdk2_${QDK2_VER}_bionic_amd64.deb
 
 # Install docker client
 RUN \
